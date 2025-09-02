@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { LogOutIcon, UserIcon, HeartIcon, ClockIcon, CheckCircleIcon, HistoryIcon, SearchIcon, LayoutDashboardIcon, UsersIcon, CreditCardIcon, BellIcon, TrendingUpIcon, AlertCircleIcon, LogOut, RefreshCwIcon } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, MealRequest, Donation } from '../lib/supabase';
+import { supabase, MealRequest, Donation, getDonorBalance } from '../lib/supabase';
 import { initializePayment, generatePaymentReference } from '../lib/paystack';
 import { logSupabaseError, testSupabaseQuery } from '../lib/debugHelper';
 import toast from 'react-hot-toast';
@@ -96,13 +96,13 @@ const DonationHistory = ({ donations }: { donations: Donation[] }) => {
       </div>
     </div>;
 };
-const ImpactSummary = ({ donations }: { donations: Donation[] }) => {
+const ImpactSummary = ({ donations, balance, onAddFunds }: { donations: Donation[], balance: number, onAddFunds: () => void }) => {
   const totalDonated = donations
     .filter(d => d.status === 'completed')
     .reduce((sum, d) => sum + Number(d.amount), 0);
-  
+
   const studentsHelped = new Set(donations.map(d => d.meal_request?.student_id)).size;
-  
+
   return <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
         <h3 className="text-lg font-medium text-white">Your Impact</h3>
@@ -148,9 +148,9 @@ const ImpactSummary = ({ donations }: { donations: Donation[] }) => {
         </div>
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-3">
-            Every donation helps a student focus on learning instead of hunger
+            Your current balance: <strong>${balance.toFixed(2)}</strong>
           </p>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          <button onClick={onAddFunds} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
             <CreditCardIcon size={16} className="mr-2" />
             Add Funds to Your Account
           </button>
@@ -165,14 +165,55 @@ const DonorDashboard = () => {
   const [mealRequests, setMealRequests] = useState<MealRequest[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [balance, setBalance] = useState(0);
 
   useEffect(() => {
     if (profile?.role === 'donor') {
       loadDashboardData();
+      loadDonorBalance();
       const cleanup = setupRealTimeSubscriptions();
       return cleanup;
     }
   }, [profile]);
+
+  const loadDonorBalance = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await getDonorBalance(user.id);
+      if (error) {
+        console.error('Failed to load donor balance:', error);
+        return;
+      }
+      setBalance(data || 0);
+    } catch (error) {
+      console.error('Error loading donor balance:', error);
+    }
+  };
+
+  const handleAddFunds = async () => {
+    if (!user?.email || !user?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    try {
+      const amountToAdd = 5000; // Example: 5000 kobo = 50 NGN, you can make this dynamic or prompt user
+      const paymentData = {
+        email: user.email,
+        amount: amountToAdd,
+        reference: generatePaymentReference(),
+        callback_url: window.location.origin + '/donor-dashboard',
+        metadata: {
+          donor_id: user.id,
+          payment_type: 'add_funds' as const
+        }
+      };
+      await initializePayment(paymentData);
+      toast.success('Add funds payment initiated! Please complete the transaction.');
+    } catch (error: any) {
+      console.error('Error initiating add funds payment:', error);
+      toast.error('Failed to initiate add funds payment');
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -301,7 +342,8 @@ const DonorDashboard = () => {
         metadata: {
           meal_request_id: id,
           donor_id: user.id,
-          student_name: mealRequest.student?.full_name || 'Student'
+          student_name: mealRequest.student?.full_name || 'Student',
+          payment_type: 'meal_funding' as const
         }
       };
 
@@ -431,7 +473,7 @@ const DonorDashboard = () => {
                 </p>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ImpactSummary donations={donations} />
+                <ImpactSummary donations={donations} balance={balance} onAddFunds={handleAddFunds} />
                 <div>
                   <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                     <div className="flex items-center mb-4">

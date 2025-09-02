@@ -15,6 +15,7 @@ export interface Profile {
   grade?: string
   phone?: string
   avatar_url?: string
+  balance?: number
   created_at: string
   updated_at: string
 }
@@ -217,4 +218,36 @@ export const markNotificationAsRead = async (id: string) => {
     .update({ read: true })
     .eq('id', id)
   return { data, error }
+}
+
+// Donor balance helpers
+export const getDonorBalance = async (donorId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('balance')
+    .eq('id', donorId)
+    .single()
+  return { data: data?.balance || 0, error }
+}
+
+export const updateDonorBalance = async (donorId: string, newBalance: number) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ balance: newBalance })
+    .eq('id', donorId)
+    .select()
+    .single()
+  return { data, error }
+}
+
+export const addFundsToDonorBalance = async (donorId: string, amount: number) => {
+  // First get current balance
+  const { data: currentBalance, error: balanceError } = await getDonorBalance(donorId)
+  if (balanceError) return { data: null, error: balanceError }
+
+  // Calculate new balance
+  const newBalance = (currentBalance || 0) + amount
+
+  // Update balance
+  return await updateDonorBalance(donorId, newBalance)
 }

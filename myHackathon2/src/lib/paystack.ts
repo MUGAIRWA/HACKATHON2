@@ -9,9 +9,10 @@ export interface PaymentData {
   reference: string;
   callback_url: string;
   metadata: {
-    meal_request_id: string;
+    meal_request_id?: string;
     donor_id: string;
-    student_name: string;
+    student_name?: string;
+    payment_type: 'meal_funding' | 'add_funds';
   };
 }
 
