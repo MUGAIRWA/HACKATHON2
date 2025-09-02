@@ -1,0 +1,47 @@
+/* Progress bar styles */
+.progress-bar {
+  transition: width 0.3s ease;
+}
+
+.progress-bar-green {
+  background-color: #16a34a;
+}
+
+.progress-bar-blue {
+  background-color: #2563eb;
+}
+
+.progress-bar-yellow {
+  background-color: #ca8a04;
+}
+
+.progress-bar-red {
+  background-color: #dc2626;
+}
+
+.progress-bar-purple {
+  background-color: #9333ea;
+}
+
+/* Chart positioning styles */
+.chart-line-high {
+  bottom: 66%;
+}
+
+.chart-line-medium {
+  bottom: 33%;
+}
+
+.chart-line-low {
+  bottom: 0%;
+}
+
+/* Bar chart styles */
+.bar-chart-bar {
+  transition: height 0.3s ease;
+}
+
+.bar-chart-empty {
+  border: 2px dashed #d1d5db;
+  background-color: transparent;
+}
