@@ -56,7 +56,7 @@ Before running this project, make sure you have:
 
 ### 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/MUGAIRWA/HACKATHON2.git
 cd myHackathon2
 ```
 
